@@ -62,7 +62,9 @@ class BranchManager:
         if self.branches.has_key(name):
             print("ERROR: Branch '%s' existed" % name)
             return None
-        return self.branches[name] = Branch(label, prev)
+        branch = Branch(label, prev)
+        self.branches[name] = branch
+        return branch
 
     def remove(self, name):
         if self.branches.has_key(name):
@@ -87,7 +89,9 @@ class NodeManager:
         if self.nodes.has_key(name):
             print("ERROR: Node '%s' existed" % name)
             return None
-        return self.nodes[name] = Node(date)
+        node = Node(date)
+        self.nodes[name] = node
+        return node
 
     def remove(self, name):
         if self.nodes.has_key(name):
@@ -97,7 +101,7 @@ class NodeManager:
         return self.nodes.has_key(name) and self.nodes.get(name) or None
 
     def keys(self):
-        return sorted(self.node.keys(), cmp=lambda x,y:cmp(x[-4:], y[-4:]), reverse=True)
+        return sorted(self.nodes.keys(), cmp=lambda x,y:cmp(x[-4:], y[-4:]), reverse=True)
 
 class Edge:
     def __init__(self, prev, label = None, Back = None):
@@ -298,13 +302,13 @@ class History:
         return True
 
     def saveFile(self):
-        dot.open(self.dotSave, 'w')
+        dot = open(self.dotSave, 'w')
         dot.write(FILE_SAVE_1)
-        dot.saveDates(dot)
-        dot.saveRanks(dot)
-        dot.saveHeads(dot)
-        dot.saveNodes(dot)
-        dot.saveEdges(dot)
+        self.saveDates(dot)
+        self.saveRanks(dot)
+        self.saveHeads(dot)
+        self.saveNodes(dot)
+        self.saveEdges(dot)
         dot.write(FILE_SAVE_0)
         dot.close()
 
@@ -313,13 +317,34 @@ class History:
         optDict = {}
         for option in sys.argv[1:]:
             if '=' in option:
-                key value = str(option).split('=')
+                key, value = str(option).split('=')
                 optDict[key] = value
             else:
                 optDict[str(option)] = None
         self.dotLoad = optDict.get('-if', DEFAULT_DOT_FILE)
         self.dotSave = optDict.get('-of', DEFAULT_DOT_FILE)
         self.command = optDict.get('-c', None)
+
+    def nodeCreate(self, name, date, prev = None):
+        self.dateMgr.insert(date)
+        node = self.nodeMgr.insert(name, date)
+        if self.nodeMgr.nodes.has_key(prev):
+            node.edge = Edge(prev)
+
+    def nodeDelete(self, name):
+        node = self.nodeMgr.get(name)
+        if node:
+            prev = node.edge and node.edge.prev or None
+            for k in self.branchMgr.keys():
+                branch = self.branchMgr.get(k)
+                if not cmp(branch.prev, name):
+                    branch.prev = prev
+            for k in self.nodeMgr.keys():
+                edge = self.nodeMgr.get(k).edge
+                if edge and not cmp(edge.prev, name):
+                    edge.prev = prev
+            self.dateMgr.remove(node.date)
+            self.nodeMgr.remove(name)
 
     def processCommand(self):
         if not self.command:
