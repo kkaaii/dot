@@ -127,7 +127,7 @@ class DateManager:
     def keys(self):
         return sorted(self.dates.keys(), reverse=True)
 
-class Dot:
+class History:
     def __init__(self):
         self.dotLoad = DEFAULT_DOT_FILE
         self.dotSave = DEFAULT_DOT_FILE
@@ -167,3 +167,199 @@ class Dot:
             prev = date
         dot.write(";\n")
         dot.write(DATE_SAVE_0)
+
+    def loadRanks(self, dot):
+        print("Loading Ranks...")
+        if cmp(dot.readline(), RANK_LOAD_1):
+            return False
+        regex = re.compile(RANK_LOAD_X)
+        while True:
+            line = dot.readline()
+            if not cmp(line, RANK_LOAD_0):
+                break;
+            match = regex.search(line)
+            if not match:
+                return False
+            date = match.group(1)
+            name = match.group(2)
+            self.dateMgr.insert(date)
+            if not self.nodeMgr.insert(name, date):
+                return False
+        return True
+
+    def saveRanks(self, dot):
+        dot.write(RANK_SAVE_1)
+        for name in self.nodeMgr.keys():
+            node = self.nodeMgr.get(name)
+            dot.write(RANK_SAVE_X % (node.date, name))
+        dot.write(RANK_SAVE_0)
+
+    def loadHeads(self, dot):
+        print("Loading Heads...")
+        if cmp(dot.readline(), HEAD_LOAD_1):
+            return False
+        regex = re.compile(HEAD_LOAD_X)
+        while True:
+            line = dot.readline()
+            if not cmp(line, HEAD_LOAD_0):
+                break
+            match = regex.search(line)
+            if not match:
+                return False
+            name = match.group(1)
+            label = match.group(2)
+            self.branchMgr.insert(name, label)
+        return True
+
+    def saveHeads(self, dot):
+        dot.write(HEAD_SAVE_1)
+        for name in self.branchMgr.keys():
+            branch = self.branchMgr.get(name)
+            dot.write(HEAD_SAVE_X % (name, branch.label))
+        dot.write(HEAD_SAVE_0)
+
+    def loadNodes(self, dot):
+        print("Loading Nodes...")
+        if cmp(dot.readline(), NODE_LOAD_1):
+            return False
+        if cmp(dot.readline(), NODE_LOAD_2):
+            return False
+        regex = re.compile(NODE_LOAD_X)
+        while True:
+            line.dot.readline()
+            if not cmp(line, NODE_LOAD_0):
+                break
+            match = regex.search(line)
+            if not match:
+                return False
+            branch = self.branchMgr.get(match.group(1))
+            branch.prev = match.group(2)
+        return True
+
+    def saveNodes(self, dot):
+        dot.write(NODE_SAVE_1)
+        dot.write(NODE_SAVE_2)
+        for name in self.branchMgr.keys():
+            branch = self.branchMgr.get(name)
+            if branch.prev:
+                dot.write(NODE_SAVE_X % (name, branch.prev))
+        dot.write(NODE_SAVE_0)
+
+    def loadEdges(self, dot):
+        print("Loading Edges...")
+        while True:
+            line = dot.readline()
+            if not cmp(line, EDGE_LOAD_0):
+                break
+            name, prev = line.strip().split(" -> ")
+            node = self.nodeMgr.get(name)
+            node.edge = Edge(prev)
+        return True
+
+    def saveEdges(self, dot):
+        for name in self.nodeMgr.keys():
+            edge = self.nodeMgr.get(name).edge
+            if not edge:
+                continue
+            dot.write("  %s -> %s" % (name, edge.prev))
+            if edge.back:
+                if edge.label:
+                    dot.write("[dir=back, color=red, style=bold, label=\"%s\"]\n" % edge.label)
+                else:
+                    dot.write("[dir=back, color=red, style=bold]\n")
+            else:
+                if edge.label:
+                    dot.write("[label=\"%s\"]\n" % edge.label)
+                else:
+                    dot.write("\n")
+        dot.write(EDGE_SAVE_0)
+
+    def loadFile(self):
+        try:
+            dot = open(self.dotLoad, 'r')
+        except IOError:
+            return False
+
+        if cmp(dot.readline(), FILE_LOAD_1):
+            return False
+        if not self.loadDates(dot):
+            return False
+        if not self.loadRanks(dot):
+            return False
+        if not self.loadHeads(dot):
+            return False
+        if not self.loadNodes(dot):
+            return False
+        if not self.loadEdges(dot):
+            return False
+        if cmp(dot.readline(), FILE_LOAD_0):
+            return False
+        dot.close()
+        return True
+
+    def saveFile(self):
+        dot.open(self.dotSave, 'w')
+        dot.write(FILE_SAVE_1)
+        dot.saveDates(dot)
+        dot.saveRanks(dot)
+        dot.saveHeads(dot)
+        dot.saveNodes(dot)
+        dot.saveEdges(dot)
+        dot.write(FILE_SAVE_0)
+        dot.close()
+
+    def parseArguments(self):
+        print("Parsing Arguments...")
+        optDict = {}
+        for option in sys.argv[1:]:
+            if '=' in option:
+                key value = str(option).split('=')
+                optDict[key] = value
+            else:
+                optDict[str(option)] = None
+        self.dotLoad = optDict.get('-if', DEFAULT_DOT_FILE)
+        self.dotSave = optDict.get('-of', DEFAULT_DOT_FILE)
+        self.command = optDict.get('-c', None)
+
+    def processCommand(self):
+        if not self.command:
+            return False
+        args = self.command.split(' ')
+        if not cmp(args[0], 'branch'):
+            name = args[2]
+            if not cmp(args[1], '-c'):
+                label = len(args) > 3 and args[3] or None
+                prev = len(args) > 4 and args[4] or None
+                self.branchCreate(name, label, prev)
+            elif not cmp(args[1], '-d'):
+                self.branchDelete(name)
+            elif not cmp(args[1], '-u'):
+                label = len(args) > 3 and args[3] or None
+                prev = len(args) > 4 and args[4] or None
+                if '*' in label:
+                    label = None
+                self.branchUpdate(name, label, prev)
+        if not cmp(args[0], 'node'):
+            name = args[2]
+            if not cmp(args[1], '-c'):
+                date = args[3]
+                prev = len(args) > 4 and args[4] or None
+                self.nodeCreate(name, date, prev)
+            elif not cmp(args[1], '-d'):
+                self.nodeDelete(name)
+            elif not cmp(args[1], '-u'):
+                self.nodeUpdate(name)
+        return True
+
+    def run(self):
+        self.parseArguments()
+        self.loadFile()
+        self.processCommand()
+        self.saveFile()
+        pass
+
+def main():
+    History().run()
+
+if __name__ == "__main__":
+    main()
