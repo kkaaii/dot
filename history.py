@@ -104,7 +104,7 @@ class NodeManager:
         return sorted(self.nodes.keys(), cmp=lambda x,y:cmp(x[-4:], y[-4:]), reverse=True)
 
 class Edge:
-    def __init__(self, prev, label = None, Back = None):
+    def __init__(self, prev, label = None, back = None):
         self.prev = prev
         self.label = label
         self.back = back
@@ -138,7 +138,7 @@ class History:
         self.command = None
 
         self.dateMgr = DateManager()
-        self.brancgMgr = BranchManager()
+        self.branchMgr = BranchManager()
         self.nodeMgr = NodeManager()
 
     def loadDates(self, dot):
@@ -230,7 +230,7 @@ class History:
             return False
         regex = re.compile(NODE_LOAD_X)
         while True:
-            line.dot.readline()
+            line = dot.readline()
             if not cmp(line, NODE_LOAD_0):
                 break
             match = regex.search(line)
@@ -324,6 +324,19 @@ class History:
         self.dotLoad = optDict.get('-if', DEFAULT_DOT_FILE)
         self.dotSave = optDict.get('-of', DEFAULT_DOT_FILE)
         self.command = optDict.get('-c', None)
+
+    def branchCreate(self, name, label, prev):
+        self.branchMgr.insert(name, label, prev)
+
+    def branchDelete(self, name):
+        self.branchMgr.remove(name)
+
+    def branchUpdate(self, name, label, prev):
+        branch = self.branchMgr.get(name)
+        if label:
+            branch.label = label
+        if prev:
+            branch.prev = prev
 
     def nodeCreate(self, name, date, prev = None):
         self.dateMgr.insert(date)
