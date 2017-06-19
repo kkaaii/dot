@@ -50,19 +50,19 @@ EDGE_LOAD_0 = "\n"
 EDGE_SAVE_0 = "\n"
 
 class Branch:
-    def __init__(self, label, prev = None):
-        self.label = label
+    def __init__(self, text, prev = None):
+        self.text = text
         self.prev = prev
 
 class BranchManager:
     def __init__(self):
         self.branches = {}
 
-    def insert(self, name, label, prev = None):
+    def insert(self, name, text, prev = None):
         if self.branches.has_key(name):
             print("ERROR: Branch '%s' existed" % name)
             return None
-        branch = Branch(label, prev)
+        branch = Branch(text, prev)
         self.branches[name] = branch
         return branch
 
@@ -104,9 +104,9 @@ class NodeManager:
         return sorted(self.nodes.keys(), cmp=lambda x,y:cmp(x[-4:], y[-4:]), reverse=True)
 
 class Edge:
-    def __init__(self, prev, label = None, back = None):
+    def __init__(self, prev, text = None, back = None):
         self.prev = prev
-        self.label = label
+        self.text = text
         self.back = back
 
 class DateManager:
@@ -211,15 +211,15 @@ class History:
             if not match:
                 return False
             name = match.group(1)
-            label = match.group(2)
-            self.branchMgr.insert(name, label)
+            text = match.group(2)
+            self.branchMgr.insert(name, text)
         return True
 
     def saveHeads(self, dot):
         dot.write(HEAD_SAVE_1)
         for name in self.branchMgr.keys():
             branch = self.branchMgr.get(name)
-            dot.write(HEAD_SAVE_X % (name, branch.label))
+            dot.write(HEAD_SAVE_X % (name, branch.text))
         dot.write(HEAD_SAVE_0)
 
     def loadNodes(self, dot):
@@ -267,13 +267,13 @@ class History:
                 continue
             dot.write("  %s -> %s" % (name, edge.prev))
             if edge.back:
-                if edge.label:
-                    dot.write("[dir=back, color=red, style=bold, label=\"%s\"]\n" % edge.label)
+                if edge.text:
+                    dot.write("[dir=back, color=red, style=bold, label=\"%s\"]\n" % edge.text)
                 else:
                     dot.write("[dir=back, color=red, style=bold]\n")
             else:
-                if edge.label:
-                    dot.write("[label=\"%s\"]\n" % edge.label)
+                if edge.text:
+                    dot.write("[label=\"%s\"]\n" % edge.text)
                 else:
                     dot.write("\n")
         dot.write(EDGE_SAVE_0)
@@ -325,16 +325,16 @@ class History:
         self.dotSave = optDict.get('-of', DEFAULT_DOT_FILE)
         self.command = optDict.get('-c', None)
 
-    def branchCreate(self, name, label, prev):
-        self.branchMgr.insert(name, label, prev)
+    def branchCreate(self, name, text, prev):
+        self.branchMgr.insert(name, text, prev)
 
     def branchDelete(self, name):
         self.branchMgr.remove(name)
 
-    def branchUpdate(self, name, label, prev):
+    def branchUpdate(self, name, text, prev):
         branch = self.branchMgr.get(name)
-        if label:
-            branch.label = label
+        if text:
+            branch.text = text
         if prev:
             branch.prev = prev
 
@@ -366,17 +366,17 @@ class History:
         if not cmp(args[0], 'branch'):
             name = args[2]
             if not cmp(args[1], '-c'):
-                label = len(args) > 3 and args[3] or None
+                text = len(args) > 3 and args[3] or None
                 prev = len(args) > 4 and args[4] or None
-                self.branchCreate(name, label, prev)
+                self.branchCreate(name, text, prev)
             elif not cmp(args[1], '-d'):
                 self.branchDelete(name)
             elif not cmp(args[1], '-u'):
-                label = len(args) > 3 and args[3] or None
+                text = len(args) > 3 and args[3] or None
                 prev = len(args) > 4 and args[4] or None
-                if '*' in label:
-                    label = None
-                self.branchUpdate(name, label, prev)
+                if '*' in text:
+                    text = None
+                self.branchUpdate(name, text, prev)
         if not cmp(args[0], 'node'):
             name = args[2]
             if not cmp(args[1], '-c'):
