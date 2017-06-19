@@ -380,7 +380,7 @@ class History:
         if not cmp(args[0], 'node'):
             name = args[2]
             if not cmp(args[1], '-c'):
-                date = args[3]
+                date = len(args) > 3 and args[3] or None
                 prev = len(args) > 4 and args[4] or None
                 self.nodeCreate(name, date, prev)
             elif not cmp(args[1], '-d'):
