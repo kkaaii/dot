@@ -32,7 +32,7 @@ HEAD_LOAD_X = r'\s+(\w*)\s+\[label=\"(\S*)\", fontsize=10\]'
 HEAD_LOAD_0 = "\n"
 
 HEAD_SAVE_1 = "  node [shape=box, style=filled]\n"
-HEAD_SAVE_X = "  %s [label=\"%s\", fontsize=10]"
+HEAD_SAVE_X = "  %s [label=\"%s\", fontsize=10]\n"
 HEAD_SAVE_0 = "\n"
 
 NODE_LOAD_1 = "  node [style=rounded]\n"
