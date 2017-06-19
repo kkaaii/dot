@@ -136,10 +136,15 @@ class History:
         self.dotLoad = DEFAULT_DOT_FILE
         self.dotSave = DEFAULT_DOT_FILE
         self.command = None
+        self.verbose = None
 
         self.dateMgr = DateManager()
         self.branchMgr = BranchManager()
         self.nodeMgr = NodeManager()
+
+    def Verbose(self, output):
+        if self.verbose:
+            print(output)
 
     def loadDates(self, dot):
         print("Loading Dates...")
@@ -175,6 +180,7 @@ class History:
     def loadRanks(self, dot):
         print("Loading Ranks...")
         if cmp(dot.readline(), RANK_LOAD_1):
+            print("ERROR: expect '%s'" % RANK_LOAD_1)
             return False
         regex = re.compile(RANK_LOAD_X)
         while True:
@@ -186,6 +192,7 @@ class History:
                 return False
             date = match.group(1)
             name = match.group(2)
+            self.Verbose("\t%s - %s" % (date, name))
             self.dateMgr.insert(date)
             if not self.nodeMgr.insert(name, date):
                 return False
@@ -212,6 +219,7 @@ class History:
                 return False
             name = match.group(1)
             text = match.group(2)
+            self.Verbose("\t%s - %s" % (name, text))
             self.branchMgr.insert(name, text)
         return True
 
@@ -236,8 +244,10 @@ class History:
             match = regex.search(line)
             if not match:
                 return False
-            branch = self.branchMgr.get(match.group(1))
-            branch.prev = match.group(2)
+            name = match.group(1)
+            prev = match.group(2)
+            self.Verbose("\t%s -> %s" % (name, prev))
+            self.branchMgr.get(name).prev = prev
         return True
 
     def saveNodes(self, dot):
@@ -256,6 +266,7 @@ class History:
             if not cmp(line, EDGE_LOAD_0):
                 break
             name, prev = line.strip().split(" -> ")
+            self.Verbose("\t%s -> %s" % (name, prev))
             node = self.nodeMgr.get(name)
             node.edge = Edge(prev)
         return True
@@ -320,10 +331,11 @@ class History:
                 key, value = str(option).split('=')
                 optDict[key] = value
             else:
-                optDict[str(option)] = None
+                optDict[str(option)] = True
         self.dotLoad = optDict.get('-if', DEFAULT_DOT_FILE)
         self.dotSave = optDict.get('-of', DEFAULT_DOT_FILE)
         self.command = optDict.get('-c', None)
+        self.verbose = optDict.get('-v', None)
 
     def branchCreate(self, name, text, prev):
         self.branchMgr.insert(name, text, prev)
