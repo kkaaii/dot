@@ -29,6 +29,12 @@ RANK_SAVE_2 = "  node [style=rounded]\n"
 RANK_SAVE_X = "  { rank=same; \"%s\"; %s };\n"
 RANK_SAVE_0 = "\n"
 
+DATA_LOAD_X = r'\s+(\w*)\s+\[shape=record, label=\"([\S\s]*)\"\]'
+DATA_LOAD_0 = "\n"
+
+DATA_SAVE_X = "  %s [shape=record, label=\"%s\"];\n"
+DATA_SAVE_0 = "\n"
+
 HEAD_LOAD_1 = "  node [shape=box, style=filled]\n"
 HEAD_LOAD_X = r'\s+(\w*)\s+\[label=\"(\S*)\", fontsize=10\]'
 HEAD_LOAD_0 = "\n"
@@ -78,10 +84,21 @@ class BranchManager:
     def keys(self):
         return sorted(self.branches.keys(), reverse=True)
 
+class Data:
+    def __init__(self):
+        self.data = {}
+
+    def fromText(self, text):
+        self.data["_"] = text
+
+    def toText(self):
+        return self.data.get("_")
+
 class Node:
     def __init__(self, date, edge = None):
         self.date = date
         self.edge = edge
+        self.data = Data()
 
 class NodeManager:
     def __init__(self):
@@ -211,6 +228,29 @@ class History:
             dot.write(RANK_SAVE_X % (node.date, name))
         dot.write(RANK_SAVE_0)
 
+    def loadData(self, dot):
+        print("Loading Data...")
+        regex = re.compile(DATA_LOAD_X)
+        while True:
+            line = dot.readline()
+            if not cmp(line, DATA_LOAD_0):
+                break
+            match = regex.search(line)
+            if not match:
+                print("ERROR: expect pattern '%s'" % DATA_LOAD_X)
+                return False
+            name = match.group(1)
+            text = match.group(2)
+            self.nodeMgr.get(name).data.fromText(text)
+        return True
+
+    def saveData(self, dot):
+        for name in self.nodeMgr.keys():
+            data = self.nodeMgr.get(name).data
+            if data.data.has_key("_"):
+                dot.write(DATA_SAVE_X % (name, data.toText()))
+        dot.write(DATA_SAVE_0)
+                
     def loadHeads(self, dot):
         print("Loading Heads...")
         if cmp(dot.readline(), HEAD_LOAD_1):
@@ -307,6 +347,8 @@ class History:
             return False
         if not self.loadRanks(dot):
             return False
+        if not self.loadData(dot):
+            return False
         if not self.loadHeads(dot):
             return False
         if not self.loadNodes(dot):
@@ -323,6 +365,7 @@ class History:
         dot.write(FILE_SAVE_1)
         self.saveDates(dot)
         self.saveRanks(dot)
+        self.saveData(dot)
         self.saveHeads(dot)
         self.saveNodes(dot)
         self.saveEdges(dot)
@@ -377,6 +420,22 @@ class History:
             self.dateMgr.remove(node.date)
             self.nodeMgr.remove(name)
 
+    def nodeAddData(self, data, text):
+        if not text:
+            return False
+
+        if not data.has_key(text):
+            data[text] = Data()
+        return True
+
+    def nodeUpdate(self, name, tag1, tag2, tag3):
+        data1 = self.nodeMgr.get(name).data.data
+        if self.nodeAddData(data1, tag1):
+            data2 = data1.get(tag1).data
+            if self.nodeAddData(data2, tag2):
+                data3 = data2.get(tag2).data
+                self.nodeAddData(data3, tag3)
+
     def processCommand(self):
         if not self.command:
             return False
@@ -404,7 +463,10 @@ class History:
             elif not cmp(args[1], '-d'):
                 self.nodeDelete(name)
             elif not cmp(args[1], '-u'):
-                self.nodeUpdate(name)
+                tag1 = len(args) > 3 and args[3] or None
+                tag2 = len(args) > 4 and args[4] or None
+                tag3 = len(args) > 5 and args[5] or None
+                self.nodeUpdate(name, tag1, tag2, tag3)
         return True
 
     def run(self):
