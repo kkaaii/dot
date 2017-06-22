@@ -20,10 +20,12 @@ DATE_SAVE_3 = "    edge [dir=none]\n"
 DATE_SAVE_0 = "  }\n"
 
 RANK_LOAD_1 = "\n"
+RANK_LOAD_2 = "  node [style=rounded]\n"
 RANK_LOAD_X = r'\s+{\s+rank=same;\s+\"(\S*)\";\s+(\w*)\s+};'
 RANK_LOAD_0 = "\n"
 
 RANK_SAVE_1 = "\n"
+RANK_SAVE_2 = "  node [style=rounded]\n"
 RANK_SAVE_X = "  { rank=same; \"%s\"; %s };\n"
 RANK_SAVE_0 = "\n"
 
@@ -182,6 +184,9 @@ class History:
         if cmp(dot.readline(), RANK_LOAD_1):
             print("ERROR: expect '%s'" % RANK_LOAD_1)
             return False
+        if cmp(dot.readline(), RANK_LOAD_2):
+            print("ERROR: expect '%s'" % RANK_LOAD_2)
+            return False
         regex = re.compile(RANK_LOAD_X)
         while True:
             line = dot.readline()
@@ -200,6 +205,7 @@ class History:
 
     def saveRanks(self, dot):
         dot.write(RANK_SAVE_1)
+        dot.write(RANK_SAVE_2)
         for name in self.nodeMgr.keys():
             node = self.nodeMgr.get(name)
             dot.write(RANK_SAVE_X % (node.date, name))
