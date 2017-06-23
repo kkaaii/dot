@@ -37,9 +37,17 @@ DATA_LOAD_1 = []
 DATA_LOAD_X = r'\s+(\w*)\s+\[shape=record, label=\"([\S\s]*)\"\]'
 DATA_LOAD_0 = "\n"
 
+TEXT2DATA_1 = r'\|\{\{(\S+?)\}\|([^\{\|\}]+)\}\}\}(.*)'
+TEXT2DATA_2 = r'\|\{\{(\S+?)\}\|([^\{\|\}]+)\}(.*)'
+TEXT2DATA_3 = r'\|([^\{\|\}]+)(.*)'
+
 DATA_SAVE_1 = []
 DATA_SAVE_X = "  %s [shape=record, label=\"%s\"];\n"
 DATA_SAVE_0 = "\n"
+
+DATA2TEXT_1 = "|{{%s}|%s}}}"
+DATA2TEXT_2 = "|{{%s}|%s}"
+DATA2TEXT_3 = "|%s"
 
 HEAD_LOAD_1 = [ "  node [shape=box, style=filled]\n" ]
 HEAD_LOAD_X = r'\s+(\w*)\s+\[label=\"(\S*)\", fontsize=10\]'
@@ -98,11 +106,71 @@ class Data:
     def __init__(self):
         self.data = {}
 
+    def __fromText3(self, text3, data3):
+        regex = re.compile(TEXT2DATA_3)
+        while True:
+            match = regex.search(text3)
+            if not match:
+                break
+            text3 = match.group(2)
+            name3 = match.group(1)
+            data3[name3] = Data()
+
+    def __fromText2(self, text2, data2):
+        regex = re.compile(TEXT2DATA_2)
+        while True:
+            match = regex.search(text2)
+            if not match:
+                break
+            text2 = match.group(3)
+            name2 = match.group(2)
+            data2[name2] = Data()
+
+            text3 = "|" + match.group(1)
+            data3 = data2.get(name2).data
+            self.__fromText3(text3, data3)
+
+    def __fromText1(self, text1, data1):
+        regex = re.compile(TEXT2DATA_1)
+        while True:
+            match = regex.search(text1)
+            if not match:
+                break
+            text1 = match.group(3)
+            name1 = match.group(2)
+            data1[name1] = Data()
+
+            text2 = "|" + match.group(1)
+            data2 = data1.get(name1).data
+            self.__fromText2(text2, data2)
+
     def fromText(self, text):
-        self.data["_"] = text
+        text1 = "|" + text[2:]
+        data1 = self.data
+        self.__fromText1(text1, data1)
+
+    def __toText3(self, data3):
+        text = ""
+        for name in data3.keys():
+            text = text + (DATA2TEXT_3 % name)
+        return text[1:]
+
+    def __toText2(self, data2):
+        text = ""
+        for name in data2.keys():
+            data3 = data2.get(name).data
+            text = text + (DATA2TEXT_2 % (self.__toText3(data3), name))
+        return text[1:]
+
+    def __toText1(self, data1):
+        text = ""
+        for name in data1.keys():
+            data2 = data1.get(name).data
+            text = text + (DATA2TEXT_1 % (self.__toText2(data2), name))
+        return text[1:]
 
     def toText(self):
-        return self.data.get("_")
+        return "{{" + self.__toText1(self.data)
 
 class Node:
     def __init__(self, date, edge = None):
@@ -223,7 +291,7 @@ class History:
         return True
 
     def saveRanks(self, dot):
-        for line in DATE_SAVE_1:
+        for line in RANK_SAVE_1:
             dot.write(line)
         for name in self.nodeMgr.keys():
             node = self.nodeMgr.get(name)
@@ -255,7 +323,7 @@ class History:
             dot.write(line)
         for name in self.nodeMgr.keys():
             data = self.nodeMgr.get(name).data
-            if data.data.has_key("_"):
+            if data.data:
                 dot.write(DATA_SAVE_X % (name, data.toText()))
         dot.write(DATA_SAVE_0)
 
@@ -480,9 +548,9 @@ class History:
             elif not cmp(args[1], '-d'):
                 self.nodeDelete(name)
             elif not cmp(args[1], '-u'):
-                tag1 = len(args) > 3 and args[3] or None
-                tag2 = len(args) > 4 and args[4] or None
-                tag3 = len(args) > 5 and args[5] or None
+                tag1 = len(args) > 3 and args[3] or " "
+                tag2 = len(args) > 4 and args[4] or " "
+                tag3 = len(args) > 5 and args[5] or " "
                 self.nodeUpdate(name, tag1, tag2, tag3)
         return True
 
