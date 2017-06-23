@@ -37,8 +37,8 @@ DATA_LOAD_1 = []
 DATA_LOAD_X = r'\s+(\w*)\s+\[shape=record, label=\"([\S\s]*)\"\]'
 DATA_LOAD_0 = "\n"
 
-TEXT2DATA_1 = r'\|\{\{(\S+?)\}\|([^\{\|\}]+)\}\}\}(.*)'
-TEXT2DATA_2 = r'\|\{\{(\S+?)\}\|([^\{\|\}]+)\}(.*)'
+TEXT2DATA_1 = r'\|\{\{(.+?)\}\|([^\{\|\}]+)\}\}\}(.*)'
+TEXT2DATA_2 = r'\|\{\{(.+?)\}\|([^\{\|\}]+)\}(.*)'
 TEXT2DATA_3 = r'\|([^\{\|\}]+)(.*)'
 
 DATA_SAVE_1 = []
@@ -457,15 +457,19 @@ class History:
         dot.write(FILE_SAVE_0)
         dot.close()
 
-    def parseArguments(self):
-        print("Parsing Arguments...")
+    def __getOptions(self, args, delimiter = '='):
         optDict = {}
-        for option in sys.argv[1:]:
-            if '=' in option:
-                key, value = str(option).split('=')
+        for option in args:
+            if delimiter in option:
+                key, value = str(option).split(delimiter)
                 optDict[key] = value
             else:
                 optDict[str(option)] = True
+        return optDict
+        
+    def parseArguments(self):
+        print("Parsing Arguments...")
+        optDict = self.__getOptions(sys.argv[1:])
         self.dotLoad = optDict.get('-if', DEFAULT_DOT_FILE)
         self.dotSave = optDict.get('-of', DEFAULT_DOT_FILE)
         self.command = optDict.get('-c', None)
@@ -525,32 +529,29 @@ class History:
         if not self.command:
             return False
         args = self.command.split(' ')
+        optDict = self.getOptions(args, ':')
         if not cmp(args[0], 'branch'):
-            name = args[2]
+            name = optDict.get('-name')
+            text = optDict.get('-path', None)
+            prev = optDict.get('-prev', None)
             if not cmp(args[1], '-c'):
-                text = len(args) > 3 and args[3] or None
-                prev = len(args) > 4 and args[4] or None
                 self.branchCreate(name, text, prev)
             elif not cmp(args[1], '-d'):
                 self.branchDelete(name)
             elif not cmp(args[1], '-u'):
-                text = len(args) > 3 and args[3] or None
-                prev = len(args) > 4 and args[4] or None
-                if '*' in text:
-                    text = None
                 self.branchUpdate(name, text, prev)
         if not cmp(args[0], 'node'):
-            name = args[2]
+            name = optDict.get('-name')
             if not cmp(args[1], '-c'):
-                date = len(args) > 3 and args[3] or None
-                prev = len(args) > 4 and args[4] or None
+                date = optDict.get('-date', None)
+                prev = optDict.get('-prev', None)
                 self.nodeCreate(name, date, prev)
             elif not cmp(args[1], '-d'):
                 self.nodeDelete(name)
             elif not cmp(args[1], '-u'):
-                tag1 = len(args) > 3 and args[3] or " "
-                tag2 = len(args) > 4 and args[4] or " "
-                tag3 = len(args) > 5 and args[5] or " "
+                tag1 = optDict.get('-rel_can', " ")
+                tag2 = optDict.get('-rel', " ")
+                tag3 = optDict.get('-production', " ")
                 self.nodeUpdate(name, tag1, tag2, tag3)
         return True
 
